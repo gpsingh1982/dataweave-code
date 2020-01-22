@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" basePath="/dataweave" doc:name="HTTP Listener Configuration"/>
+    <flow name="dataweave-func-appFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/func" doc:name="HTTP"/>
+        <logger message="=====Flow is started ======" level="INFO" doc:name="Logger"/>
+        <set-payload value="[
+  { 
+    &quot;name&quot;: &quot;Archer&quot;,
+    &quot;jobs&quot;: [
+      { &quot;type&quot;: &quot;developer&quot; },
+      { &quot;type&quot;: &quot;investor&quot;  },
+      { &quot;type&quot;: &quot;educator&quot;  } 
+    ] 
+  },
+  {
+    &quot;name&quot;: &quot;Cyril&quot;,
+    &quot;jobs&quot;: [
+      { &quot;type&quot;: &quot;developer&quot;    },
+      { &quot;type&quot;: &quot;entrepreneur&quot; },
+      { &quot;type&quot;: &quot;lion tamer&quot;   }
+    ]
+  } 
+]" doc:name="Set Payload"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="aba49ba5-4d09-4c12-9862-a44a031522a6">
+            <dw:input-payload doc:sample="C:\Users\gyanendra_s\Desktop\order.xml" mimeType="application/xml"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+        address1: payload.order.buyer.address,
+        city: payload.order.buyer.city,
+        country: payload.order.buyer.nationality,
+        email: payload.order.buyer.email,
+        name: payload.order.buyer.name,
+        postalCode: payload.order.buyer.postCode,
+        stateOrProvince: payload.order.buyer.state
+}
+
+]]></dw:set-payload>
+        </dw:transform-message>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="sample_data\empty.xml"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+
+%var tax=0.085
+%var discount=0.05 
+---
+invoice:
+{
+	header : payload.invoice.header,
+	items :{(payload.invoice.items.*item map 
+	{
+	    item @(index: $$ + 1): {
+	    description: $.description,
+        quantity: $.quantity,
+        unit_price: $.unit_price,
+        discount : (discount * 100) as :string{format :'##'} ++ "%",
+        subtotal : $.unit_price * $.quantity 
+	}
+})}, totals: using (subtotal = payload.invoice.items reduce ((item, sum1 = 0) -> sum1 + (item.unit_price * item.quantity * (1 - discount)))) {
+        subtotal: subtotal,
+        tax: (tax * 100) as :string { format: "##.#" } ++ "%",
+        total: subtotal * (1 + tax)
+}
+ 
+}
+]]></dw:set-payload>
+        </dw:transform-message>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="sample_data\json.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload ]]></dw:set-payload>
+        </dw:transform-message>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+
+%var input = [
+  {
+    "merchant" : "Casita Azul",
+    "amount"   : 51.70
+  },
+  {
+    "merchant" : "High Wire Airlines",
+    "amount"   : 378.80
+  },
+  {
+    "merchant" : "Generic Fancy Hotel Chain",
+    "amount"   : 555.33
+  },
+  {
+    "merchant" : "High Wire Airlines",
+    "amount"   : 288.88
+  }
+]
+
+%var threshold =100
+%function overThreshold(n)  n > threshold
+%var transactionsOverThreshold = input filter overThreshold( $ )
+%var merchants = transactionsOverThreshold map $.merchant distinctBy $
+---
+{
+  count: sizeOf transactionsOverThreshold,
+  merchants: merchants
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <set-payload value="#[payload]" doc:name="Set Payload"/>
+    </flow>
+</mule>

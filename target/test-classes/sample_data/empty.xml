@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<invoice>
+    <header>
+        <customer_name>ACME, Inc.</customer_name>
+        <customer_state>CA</customer_state>
+    </header>
+    <items>
+        <item>
+            <description>Product 1</description>
+            <quantity>2</quantity>
+            <unit_price>10</unit_price>
+        </item>
+        <item>
+            <description>Product 2</description>
+            <quantity>1</quantity>
+            <unit_price>30</unit_price>
+        </item>
+    </items>
+</invoice>

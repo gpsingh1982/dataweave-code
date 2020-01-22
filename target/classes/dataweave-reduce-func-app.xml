@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <flow name="dataweave-reduce-func-appFlow">
+        <logger message="Reduce function transforamtion Started......" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+
+%var input = [
+  {
+    "merchant" : "Casita Azul",
+    "amount"   : 51.70
+  },
+  {
+    "merchant" : "High Wire Airlines",
+    "amount"   : 378.80
+  },
+  {
+    "merchant" : "Generic Fancy Hotel Chain",
+    "amount"   : 555.33
+  },
+  {
+    "merchant" : "High Wire Airlines",
+    "amount"   : 288.88
+  }
+]
+
+%var threshold =100
+%function overThreshold(n)  n > threshold
+
+---
+input reduce ( ( curVal, acc = { count: 0, merchants: [] } ) -> 
+	( 
+		{
+			  count: acc.count + 1 ,
+			  merchants: acc.merchants + curVal.merchant unless acc.merchants contains curVal.merchant otherwise acc.merchants
+			  when overThreshold(curVal.amount ) otherwise acc
+}))
+]]></dw:set-payload>
+        </dw:transform-message>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+
+%var input = [
+{
+    code: "X",
+    name: "Product X",
+    description: "Description X"
+ },
+ {
+    code: "Y",
+    name: "Product Y",
+    description: "Description Y"
+ }
+    
+]
+---
+input reduce ((val ,currval ={}) ->
+
+currval ++ (val.code):
+{ name : val.name, 
+  description : val.description	
+})
+
+]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message=" Transforamtion Complete......" level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
